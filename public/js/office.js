@@ -86,7 +86,7 @@ const kit = {};
 
 export async function buildOffice(scene) {
   const loader = new GLTFLoader();
-  await Promise.all(MODELS.map(async name => {
+  const furniture = Promise.all(MODELS.map(async name => {
     const g = await loader.loadAsync(`/assets/ph/${name}/${name}.gltf`);
     g.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     kit[name] = g.scene;
@@ -97,11 +97,12 @@ export async function buildOffice(scene) {
     return o;
   };
   const nat = {};
-  await Promise.all(['CommonTree_1', 'CommonTree_2', 'CommonTree_3', 'CommonTree_5', 'Bush_Common', 'Bush_Common_Flowers', 'Rock_Medium_1', 'Rock_Medium_2', 'Grass_Common_Tall', 'Flower_3_Group'].map(async name => {
+  const nature = Promise.all(['CommonTree_1', 'CommonTree_2', 'CommonTree_3', 'CommonTree_5', 'Bush_Common', 'Bush_Common_Flowers', 'Rock_Medium_1', 'Rock_Medium_2', 'Grass_Common_Tall', 'Flower_3_Group'].map(async name => {
     const g = await loader.loadAsync(`/assets/nature/${name}.gltf`);
     g.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; for (const m of [].concat(o.material)) { m.roughness = 1; m.metalness = 0; } } });
     nat[name] = g.scene;
   }));
+  await Promise.all([furniture, nature]);
   const grow = (name, x, z, s = 1, rot = x * 3.7 + z) => { const o = nat[name].clone(); o.position.set(x, -0.3, z); o.rotation.y = rot; o.scale.setScalar(s); scene.add(o); return o; };
   const plant = (x, z, s = 2.6) => put('potted_plant_02', x, z, x * 2.1, { s: s * 0.62, block: [0.4, 0.4] });
 

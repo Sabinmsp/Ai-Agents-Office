@@ -1,12 +1,6 @@
 // Agent Office client: an isometric office where each desk belongs to an AI team member who works for you.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { MAX_LEVEL, BUILD_COST, EFFORT_BY_LEVEL, SKILLS } from './config.js';
 import { BOSS, AGENTS } from './team.js';
@@ -23,15 +17,18 @@ const agentIndex = id => AGENTS.findIndex(a => a.id === id);
 
 // ---------------------------------------------------------------- scene
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
+renderer.shadowMap.autoUpdate = false;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#0b0e15');
-scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;   // soft reflections on wood, metal and glass
+const reflections = new THREE.PMREMGenerator(renderer), roomEnvironment = new RoomEnvironment();
+scene.environment = reflections.fromScene(roomEnvironment, 0.04).texture;
+roomEnvironment.dispose();
+reflections.dispose();
 scene.environmentIntensity = 0.3;
 const BASE_DIST = 70;   // camera distance that shows the whole office
 const camera = new THREE.PerspectiveCamera(30, 1, 2, 1200);
@@ -49,7 +46,7 @@ controls.addEventListener('change', () => { controls.target.x = THREE.MathUtils.
 const hemi = new THREE.HemisphereLight('#ffe9cf', '#2a2630', 0.5); scene.add(hemi);
 const sun = new THREE.DirectionalLight('#ffe2bd', 1.9);        // the sun by day, the moon by night; the roof is open, so it lights the rooms
 sun.target.position.set(W / 2, 0, D / 2); scene.add(sun.target);
-sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096); sun.shadow.radius = 4;
+sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.radius = 2;
 Object.assign(sun.shadow.camera, { left: -52, right: 52, top: 52, bottom: -52, near: 5, far: 220 });
 sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.06;
 scene.add(sun);
@@ -78,6 +75,7 @@ function setTime(h) {
   sun.color.copy(mix(mix('#9db4e6', '#fff4e2', day), '#ff8a48', dusk * 0.85)); sun.intensity = 0.3 + 1.5 * day - 0.4 * dusk * day;
   const el = alt > 0 ? Math.max(0.24, alt * 1.15) : 0.95, az = alt > 0 ? Math.PI * THREE.MathUtils.clamp(p, 0, 1) : 1.1;      // in November Darwin's sun passes just south of overhead
   sun.position.set(W / 2 + Math.cos(az) * Math.cos(el) * 90, Math.sin(el) * 90, D / 2 + (0.45 * Math.cos(el) + 0.12) * 90);
+  renderer.shadowMap.needsUpdate = true;
   scene.environmentIntensity = 0.16 + 0.42 * day;
   renderer.toneMappingExposure = 1.08 - 0.18 * day;
   for (const l of lamps) l.intensity = l.userData.base * (0.1 + 0.9 * lampsOn);
@@ -92,24 +90,13 @@ const refreshTime = () => setTime(MODES[timeMode] ?? darwinHour());
 $('clock').onclick = () => { timeMode = (timeMode + 1) % MODES.length; refreshTime(); };
 $('clock').title = 'Darwin time. Click to preview day, sunset and night.';
 
-// ---------------------------------------------------------------- lens: ambient occlusion, a little bloom on anything that glows, a soft vignette
-const Vignette = { uniforms: { tDiffuse: { value: null }, amount: { value: 0.36 } },
-  vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-  fragmentShader: 'uniform sampler2D tDiffuse; uniform float amount; varying vec2 vUv; void main() { vec4 c = texture2D(tDiffuse, vUv); c.rgb *= 1.0 - amount * smoothstep(0.38, 0.82, distance(vUv, vec2(0.5))); gl_FragColor = c; }' };
-let composer = null;
-try {
-  composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(2, 2, { type: THREE.HalfFloatType, samples: 4 }));
-  composer.addPass(new RenderPass(scene, camera));
-  const ao = new GTAOPass(scene, camera, 2, 2); ao.updateGtaoMaterial({ radius: 1.1, distanceExponent: 1.4, thickness: 1.2, scale: 1.15, samples: 16 }); composer.addPass(ao);
-  composer.addPass(new UnrealBloomPass(new THREE.Vector2(2, 2), 0.3, 0.55, 1.25));
-  composer.addPass(new ShaderPass(Vignette));
-  composer.addPass(new OutputPass());
-} catch (e) { console.warn('Post-processing unavailable, using plain rendering', e); composer = null; }
-
+let viewWidth = 2, viewHeight = 2;
 function resize() {
-  const w = Math.max(2, stage.clientWidth), h = Math.max(2, stage.clientHeight);
-  renderer.setSize(w, h, false); composer?.setSize(w, h);
-  camera.aspect = w / h; camera.updateProjectionMatrix();
+  viewWidth = Math.max(2, stage.clientWidth);
+  viewHeight = Math.max(2, stage.clientHeight);
+  const scale = Math.min(devicePixelRatio, 1.25, Math.sqrt(2_000_000 / (viewWidth * viewHeight)));
+  renderer.setDrawingBufferSize(viewWidth, viewHeight, scale);
+  camera.aspect = viewWidth / viewHeight; camera.updateProjectionMatrix();
 }
 addEventListener('resize', resize);
 
@@ -412,7 +399,7 @@ function hoops(S, on, here, dt, t) {
 // ---------------------------------------------------------------- labels over the 3D view
 function el(tag, cls, text) { const e = document.createElement(tag); e.className = cls; if (text != null) e.textContent = text; labels.appendChild(e); return e; }
 const proj = new THREE.Vector3();
-function toScreen(x, y, z) { proj.set(x, y, z).project(camera); return [(proj.x + 1) / 2 * stage.clientWidth, (1 - proj.y) / 2 * stage.clientHeight]; }
+function toScreen(x, y, z) { proj.set(x, y, z).project(camera); return [(proj.x + 1) / 2 * viewWidth, (1 - proj.y) / 2 * viewHeight]; }
 const place = (e, sx, sy) => { e.style.transform = `translate(-50%,-100%) translate(${sx.toFixed(1)}px,${sy.toFixed(1)}px)`; };
 function pin(e, x, y, z, dy = 0) { const [sx, sy] = toScreen(x, y, z); place(e, sx, sy + dy); }
 function say(id, text, secs = 3) { const w = walkers[id]; if (!w) return; w.bubble.textContent = text; w.bubble.hidden = false; w.bubbleUntil = performance.now() + secs * 1000; }
@@ -715,7 +702,6 @@ function flyCard(from, to, color, then, secs = 1.5) {
   const m = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.42), new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(4), side: THREE.DoubleSide, toneMapped: false }));
   scene.add(m); flying.push({ m, from: from.clone(), to: to.clone(), t: 0, secs, then });
 }
-// (glow comes from bloom on these bright, untone-mapped materials)
 const haloTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const k = c.getContext('2d'), g = k.createRadialGradient(32, 32, 2, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)'); k.fillStyle = g; k.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
 function updateFlying(dt) {
   for (let i = flying.length - 1; i >= 0; i--) {
@@ -811,12 +797,12 @@ const HANDLERS = {
     else log(ev.agentId, { web: 'looked something up online', github: 'opened the code', email: 'drafted an email', file: 'opened a file' }[ev.tool] || `used ${ev.tool}`);
   },
   collaborating(ev) {
-    const now = performance.now(), until = now + 14000, t = tasks.get(ev.taskId); if (t) setStatus(t, 'meeting');
+    const duration = ev.duration ?? 14000, until = performance.now() + duration, t = tasks.get(ev.taskId); if (t) setStatus(t, 'meeting');
     setWhiteboard(ev.title, ev.steps);
     log('hq', `called a team meeting with ${ev.agentIds.map(id => WHO[id]?.name || id).join(', ')}`);
     ev.agentIds.filter(id => walkers[id]).forEach((id, k) => { const w = walkers[id]; w.mode = 'meeting'; w.until = until; w.goTo(SPOTS.meeting[k % SPOTS.meeting.length], 4.4); });
     const boss = walkers.hq; boss.mode = 'meeting'; boss.until = until; boss.rest = 'talk'; boss.goTo(SPOTS.bossMeeting, 4.2);
-    setTimeout(() => setWhiteboard(null), 26000);
+    setTimeout(() => setWhiteboard(null), duration + 12000);
   },
   awaiting_approval(ev) {
     const t = tasks.get(ev.taskId), w = walkers[ev.agentId]; if (t) setStatus(t, 'approval');
@@ -892,13 +878,14 @@ async function start() {
   setInterval(async () => { try { const was = state.live; applyState(await api('/api/state')); if (!was && state.live) note(`Connected: ${state.models.length} models available. Pick one per person on their card.`); } catch {} }, 15000);
   setTarget(null); pickSource(); refreshStats(); loadBrain(); refreshTokens(); setInterval(refreshTokens, 20000);
   $('loading').hidden = true;
-  let last = performance.now(), clock = 0;
+  let last = performance.now(), clock = 0, nextShadow = 0;
   renderer.setAnimationLoop(() => {
     const now = performance.now(), dt = Math.min((now - last) / 1000, 0.1); last = now; clock += dt;
     updateCamera(dt); controls.update();
     for (const w of Object.values(walkers)) { brain(w, dt, now); w.update(dt, clock); }
     updateFlying(dt); updateIcons(dt); pulseApprovals(clock); updateBeams(dt); updateBrain(dt, clock); updateSports(dt, clock);
-    if (composer) composer.render(); else renderer.render(scene, camera);
+    if (now >= nextShadow) { renderer.shadowMap.needsUpdate = true; nextShadow = now + 65; }
+    renderer.render(scene, camera);
     updateLabels(now);
   });
   window.__office = { SPORTS, play: id => joinSport(walkers[id]), celebrate: id => celebrate(walkers[id]), coach: () => { walkers.hq.idle = -1; }, spawn: id => spawn(DESKS[id].who, DESKS[id].seat), DESKS, walkers, camera, controls, bus, BRAIN, brainStat, openBrain, mock, tasks, approvals, hire, openOrg, openBrain, showCard, focus, submit: (t, a) => source.submit(t, a), decide: (id, ok) => source.decide(id, ok) };

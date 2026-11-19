@@ -8,7 +8,7 @@
 //   { type: 'output',            taskId, agentId, text }                 text streams onto the monitor
 //   { type: 'tool_call',         taskId, agentId, tool, detail? }        tool: 'web' | 'github' | 'email' | 'file'; detail: the search query or page
 //   { type: 'log',               agentId, text, kind: 'work'|'life', bad? }   a line for the activity log only
-//   { type: 'collaborating',     taskId, agentIds, title, steps }        steps go on the whiteboard
+//   { type: 'collaborating',     taskId, agentIds, title, steps, duration? }   steps go on the whiteboard
 //   { type: 'awaiting_approval', taskId, agentId, title, summary }
 //   { type: 'approval',          taskId, approved }
 //   { type: 'error',             taskId, agentId, message }
@@ -72,33 +72,34 @@ export class MockSource {
   run(agent, title, origin) {
     const taskId = `mock-${++this.n}`, agentId = agent.id, e = (type, more = {}) => this.emit({ type, taskId, agentId, ...more });
     const user = origin === 'user', lines = [...MOCK_LINES];
+    const delay = (ms, fn) => this.later(user ? ms * 0.12 : ms, fn);
     let typing = null;
     const type = on => { clearInterval(typing); this.timers.delete(typing); if (on) { typing = setInterval(() => e('output', { text: `${lines.length ? lines.shift() : pick(MOCK_LINES)}…\n` }), 900); this.timers.add(typing); } };
     const work = () => { e('working'); e('output', { text: `> ${title}\n` }); type(true); const ids = this.getMemoryIds(); if (ids.length) this.later(700, () => this.emit({ type: 'memory_read', agentId, count: Math.min(2, ids.length), ids: ids.slice().sort(() => Math.random() - 0.5).slice(0, 2) })); this.emit({ type: 'model_call', agentId }); };
     const finish = (rejected = false) => { type(false); if (!rejected && Math.random() < 0.45) this.later(1500, () => this.emit({ type: 'memory_write', agentId: 'hq', id: `mock-${++this.n}`, category: pick(['you', 'business', 'projects', 'lessons']), text: pretendMemory(), sensitivity: 'normal' })); e('done', { output: `## ${title}\n\nThis is pretend work from demo mode. Connect an AI provider through OmniRoute and the real result appears here.`, rejected }); if (Math.random() < 0.4) this.later(2500, () => this.emit({ type: 'idle', agentId })); };
     const approval = () => {
       type(false);
+      this.waiting.set(taskId, ok => ok ? finish() : (work(), delay(6000, () => finish())));
       e('awaiting_approval', { title, summary: `**${agent.name}** has finished “${title}” and wants your sign-off before it goes out.\n\n(Demo mode: this is pretend work.)` });
-      this.waiting.set(taskId, ok => ok ? finish() : (work(), this.later(6000, () => finish())));
       if (!user) this.later(30000, () => this.waiting.has(taskId) && this.decide(taskId, true));
     };
     const end = () => (user || Math.random() < 0.3 ? approval() : finish());
 
     e('task_assigned', { title, origin });
-    this.later(2600, work);
-    this.later(6000, () => e('tool_call', { tool: pick(MOCK_TOOLS[agentId] || ['file']) }));
+    delay(2600, work);
+    delay(6000, () => e('tool_call', { tool: pick(MOCK_TOOLS[agentId] || ['file']) }));
     let t = 11000;
     const partner = this.getAgents().find(a => a.free && a.id !== agentId);
     if (partner && Math.random() < (user ? 0.5 : 0.25)) {
-      this.later(t, () => { type(false); this.emit({ type: 'collaborating', taskId, agentIds: [agentId, partner.id], title, steps: [`${agent.name}: first draft`, `${partner.name}: check and improve`, 'Agree what "done" looks like', 'Send for approval'] }); });
-      this.later(t + 15000, work); t += 20000;
+      delay(t, () => { type(false); this.emit({ type: 'collaborating', taskId, agentIds: [agentId, partner.id], title, duration: user ? 1700 : 14000, steps: [`${agent.name}: first draft`, `${partner.name}: check and improve`, 'Agree what "done" looks like', 'Send for approval'] }); });
+      delay(t + 15000, work); t += 20000;
     }
-    if (Math.random() < 0.14) {
+    if (!user && Math.random() < 0.14) {
       this.later(t, () => { type(false); e('error', { message: 'A source could not be reached.' }); });
       this.later(t + 11000, work); t += 16000;
     }
-    this.later(t + 1500, () => e('tool_call', { tool: pick(MOCK_TOOLS[agentId] || ['file']) }));
-    this.later(t + 6000, end);
+    delay(t + 1500, () => e('tool_call', { tool: pick(MOCK_TOOLS[agentId] || ['file']) }));
+    delay(t + 6000, end);
   }
 }
 
