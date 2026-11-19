@@ -1,0 +1,74 @@
+[
+ {
+  "id": "alps_field",
+  "place": "Graubünden",
+  "country": "Switzerland",
+  "by": "Andreas Mischok",
+  "lat": 46.61,
+  "lon": 9.43
+ },
+ {
+  "id": "flower_road",
+  "place": "Western Cape",
+  "country": "South Africa",
+  "by": "Greg Zaal",
+  "lat": -33.02,
+  "lon": 19.0
+ },
+ {
+  "id": "spiaggia_di_mondello",
+  "place": "Palermo",
+  "country": "Italy",
+  "by": "Andreas Mischok",
+  "lat": 38.2,
+  "lon": 13.33
+ },
+ {
+  "id": "table_mountain_1",
+  "place": "Cape Town",
+  "country": "South Africa",
+  "by": "Greg Zaal",
+  "lat": -33.96,
+  "lon": 18.41
+ },
+ {
+  "id": "venice_sunset",
+  "place": "Venice",
+  "country": "Italy",
+  "by": "Greg Zaal",
+  "lat": 45.43,
+  "lon": 12.35
+ },
+ {
+  "id": "shanghai_bund",
+  "place": "Shanghai",
+  "country": "China",
+  "by": "Greg Zaal",
+  "lat": 31.24,
+  "lon": 121.49
+ },
+ {
+  "id": "lilienstein",
+  "place": "Bad Schandau",
+  "country": "Germany",
+  "by": "Andreas Mischok",
+  "lat": 50.94,
+  "lon": 14.09
+ },
+ {
+  "id": "bergen",
+  "place": "Bergen",
+  "country": "Norway",
+  "by": "Greg Zaal",
+  "lat": 60.4,
+  "lon": 5.34
+ },
+ {
+  "id": "nagoya_wall_path",
+  "place": "Nagoya",
+  "country": "Japan",
+  "by": "Greg Zaal",
+  "lat": 35.18,
+  "lon": 136.9
+ }
+]

@@ -1,0 +1,16 @@
+{
+  "name": "agent-city",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "build:vercel": "node tools/build-vercel.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "latest",
+    "three": "latest",
+    "yaml": "^2.9.1",
+    "zod": "latest"
+  }
+}

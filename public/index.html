@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Office</title>
+<link rel="stylesheet" href="/style.css">
+<script type="importmap">{"imports":{"three":"/vendor/three/build/three.module.js","three/addons/":"/vendor/three/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <canvas id="view"></canvas>
+    <div id="labels"></div>
+    <div id="hud">
+      <div class="stat" title="Coins: earned when residents finish jobs"><span class="coin"></span><b id="coins">0</b></div>
+      <button id="tokens" title="Tokens used today. Click for details."><span id="tkText">0 tokens</span><span class="tkbar"><i id="tkFill"></i></span></button>
+      <button id="orgBtn">Team</button>
+      <button id="brainBtn">Brain</button>
+      <button id="logBtn" title="What everyone is doing">Log</button>
+      <button id="clock"></button>
+      <button id="inbox" hidden></button>
+      <div id="mode" class="mode"></div>
+    </div>
+    <div id="rooms"></div>
+    <div id="card" hidden></div>
+    <div id="log" hidden>
+      <header><b>Activity</b><span id="logTabs"><button data-f="all" class="on">All</button><button data-f="work">Work</button><button data-f="life">Office life</button></span><button id="logClose" title="Close">×</button></header>
+      <ol id="logList"></ol>
+    </div>
+    <div id="loading">Opening the office…</div>
+  </div>
+  <aside id="side">
+    <section id="chatBox">
+      <div id="banner" hidden></div>
+      <div id="chat"></div>
+    </section>
+    <section id="jobsBox">
+      <div id="jobs"></div>
+    </section>
+    <form id="composer">
+      <div id="target"><span id="targetName"></span><button type="button" id="targetClear" hidden>×</button></div>
+      <textarea id="input" rows="2" placeholder="Ask the Mayor…"></textarea>
+      <button id="send" type="submit">Send</button>
+    </form>
+  </aside>
+</div>
+<div id="modal" hidden><div class="sheet"><header><h3 id="modalTitle"></h3><span><button id="modalCopy">Copy</button><button id="modalClose">Close</button></span></header><div id="modalBody" class="md"></div></div></div>
+<script type="module" src="/js/game.js"></script>
+</body>
+</html>

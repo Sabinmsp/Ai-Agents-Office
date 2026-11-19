@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "npm run build:vercel",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/office.js": { "includeFiles": "config/agents.yaml" }
+  },
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/office?endpoint=$1" },
+    { "handle": "filesystem" }
+  ]
+}
