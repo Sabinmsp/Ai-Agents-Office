@@ -10,3 +10,4 @@ export const SKILLS = [
   { id: 'search', name: 'Web search', cost: 80, about: 'Searches the live web while working, so facts and prices are current.' },
   { id: 'reader', name: 'Page reader', cost: 80, about: 'Opens and reads web pages: ones it finds, or links you paste into a job.' },
 ];
+export const ANIM = { idle: 'Idle_Loop', talk: 'Idle_Talking_Loop', walk: 'Walk_Loop', run: 'Jog_Fwd_Loop', sit: 'Sitting_Idle_Loop', sitTalk: 'Sitting_Talking_Loop', cheer: 'Interact', shoot: 'Spell_Simple_Shoot', dance: 'Dance_Loop' };

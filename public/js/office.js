@@ -79,36 +79,22 @@ function canvasTex(w, h, draw) {
 }
 
 // ---------------------------------------------------------------- building the office
-const MODELS = ['modern_arm_chair_01', 'sofa_03', 'sofa_02', 'ArmChair_01', 'mid_century_lounge_chair', 'modern_coffee_table_01', 'potted_plant_04', 'potted_plant_02',
-  'CoffeeCart_01', 'round_wooden_table_02', 'bar_chair_round_01', 'steel_frame_shelves_03', 'modern_wooden_cabinet', 'drawer_cabinet',
-  'hanging_picture_frame_01', 'hanging_picture_frame_02', 'hanging_picture_frame_03', 'wall_clock', 'modern_ceiling_lamp_01', 'fern_02', 'shrub_03', 'side_table_01', 'desk_lamp_arm_01', 'Ottoman_01', 'ceramic_vase_01'];
-const kit = {};
-
 export async function buildOffice(scene) {
-  const loader = new GLTFLoader();
-  const furniture = Promise.all(MODELS.map(async name => {
-    const g = await loader.loadAsync(`/assets/ph/${name}/${name}.gltf`);
-    g.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-    kit[name] = g.scene;
-  }));
-  const put = (name, x, z, rot = 0, { y = 0, s = 1, block, parent = scene } = {}) => {
-    const o = kit[name].clone(); o.position.set(x, y, z); o.rotation.y = rot; o.scale.setScalar(K * s); parent.add(o);
+  const furnishings = new Map(), plants = new Map();
+  const put = (name, x, z, rot = 0, { y = 0, s = 1, block, castShadow = true } = {}) => {
     if (block) solid(x - block[0], z - block[1], x + block[0], z + block[1]);
-    return o;
+    if (!furnishings.has(name)) furnishings.set(name, []);
+    furnishings.get(name).push({ x, y, z, rot, scale: K * s, castShadow });
   };
-  const nat = {};
-  const nature = Promise.all(['CommonTree_1', 'CommonTree_2', 'CommonTree_3', 'CommonTree_5', 'Bush_Common', 'Bush_Common_Flowers', 'Rock_Medium_1', 'Rock_Medium_2', 'Grass_Common_Tall', 'Flower_3_Group'].map(async name => {
-    const g = await loader.loadAsync(`/assets/nature/${name}.gltf`);
-    g.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; for (const m of [].concat(o.material)) { m.roughness = 1; m.metalness = 0; } } });
-    nat[name] = g.scene;
-  }));
-  await Promise.all([furniture, nature]);
-  const grow = (name, x, z, s = 1, rot = x * 3.7 + z) => { const o = nat[name].clone(); o.position.set(x, -0.3, z); o.rotation.y = rot; o.scale.setScalar(s); scene.add(o); return o; };
+  const grow = (name, x, z, scale = 1) => {
+    if (!plants.has(name)) plants.set(name, []);
+    plants.get(name).push({ x, y: -0.3, z, rot: x * 3.7 + z, scale, castShadow: true });
+  };
   const plant = (x, z, s = 2.6) => put('potted_plant_02', x, z, x * 2.1, { s: s * 0.62, block: [0.4, 0.4] });
 
   // --- lamps. Each one glows and gets a real light from the game.
   const bulb = FX.bulb = M('#fff1d6', { emissive: '#ffd9a0', emissiveIntensity: 3.2 }), gardenBulb = FX.gardenBulb = M('#fff1d6', { emissive: '#ffcf8a', emissiveIntensity: 3 });
-  const pendant = (x, z, y = 3.1, power = 1) => { put('modern_ceiling_lamp_01', x, z, 0, { y: y - 0.3 }).traverse(o => { o.castShadow = false; }); cyl(scene, 0.09, 0.09, 0.05, bulb, x, y + 0.02, z, 12).castShadow = false; LIGHTS.push({ x, y: y - 0.2, z, power }); };
+  const pendant = (x, z, y = 3.1, power = 1) => { put('modern_ceiling_lamp_01', x, z, 0, { y: y - 0.3, castShadow: false }); cyl(scene, 0.09, 0.09, 0.05, bulb, x, y + 0.02, z, 12).castShadow = false; LIGHTS.push({ x, y: y - 0.2, z, power }); };
   const floorLamp = (x, z) => { cyl(scene, 0.22, 0.25, 0.04, M('#1b1c20', { metalness: 0.6, roughness: 0.4 }), x, 0, z); cyl(scene, 0.025, 0.025, 2.1, M('#1b1c20', { metalness: 0.6, roughness: 0.4 }), x, 0, z, 8); cyl(scene, 0.2, 0.3, 0.42, bulb, x, 2.05, z, 20).castShadow = false; solid(x - 0.25, z - 0.25, x + 0.25, z + 0.25); LIGHTS.push({ x, y: 2.2, z, power: 0.55 }); };
 
   // --- the world outside: lawn, a paved path to the door, shrubs, garden lights, trees behind the building
@@ -331,6 +317,38 @@ export async function buildOffice(scene) {
   for (const d of Object.values(DESKS)) buildDesk(scene, d);
   setWhiteboard(null); setWallStats({});
   buildGrid();
+
+  // Desks and navigation are ready. Load the decorative models after the first render.
+  return async function loadScenery() {
+    const loader = new GLTFLoader();
+    const models = [
+      ...Array.from(furnishings, ([name, instances]) => ({ url: `/assets/ph/${name}/${name}.gltf`, instances })),
+      ...Array.from(plants, ([name, instances]) => ({ url: `/assets/nature/${name}.gltf`, instances, matte: true })),
+    ];
+    async function loadNext() {
+      while (models.length) {
+        const { url, instances, matte } = models.shift();
+        try {
+          const { scene: model } = await loader.loadAsync(url);
+          if (matte) model.traverse(mesh => {
+            if (!mesh.isMesh) return;
+            for (const material of [].concat(mesh.material)) { material.roughness = 1; material.metalness = 0; }
+          });
+          for (const { x, y, z, rot, scale, castShadow } of instances) {
+            const object = model.clone();
+            object.position.set(x, y, z);
+            object.rotation.y = rot;
+            object.scale.setScalar(scale);
+            object.traverse(mesh => { if (mesh.isMesh) { mesh.castShadow = castShadow; mesh.receiveShadow = true; } });
+            scene.add(object);
+          }
+        } catch (error) {
+          console.warn(`Could not load ${url}`, error);
+        }
+      }
+    }
+    await Promise.all(Array.from({ length: 4 }, loadNext));
+  };
 }
 
 // ---------------------------------------------------------------- live surfaces the game draws on

@@ -3,8 +3,6 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { K } from './office.js';
-
-export const ANIM = { idle: 'Idle_Loop', talk: 'Idle_Talking_Loop', walk: 'Walk_Loop', run: 'Jog_Fwd_Loop', sit: 'Sitting_Idle_Loop', sitTalk: 'Sitting_Talking_Loop', cheer: 'Interact', shoot: 'Spell_Simple_Shoot', dance: 'Dance_Loop' };
 const clips = {}, bodies = {}, hairs = {}, lightSkin = {};
 export const clip = name => clips[name];
 
@@ -12,18 +10,14 @@ export async function loadPeople() {
   const loader = new GLTFLoader(), tl = new THREE.TextureLoader(), P = '/assets/people/';
   const hairNames = ['Hair_SimpleParted', 'Hair_Buzzed', 'Hair_Long', 'Hair_Beard'];
   const [anims, m, f, ml, fl, ...hs] = await Promise.all([
-    loader.loadAsync(P + 'UAL1_Standard.glb'), loader.loadAsync(P + 'Superhero_Male_FullBody.gltf'), loader.loadAsync(P + 'Superhero_Female_FullBody.gltf'),
+    loader.loadAsync(P + 'office-animations.glb'), loader.loadAsync(P + 'Superhero_Male_FullBody.gltf'), loader.loadAsync(P + 'Superhero_Female_FullBody.gltf'),
     tl.loadAsync(P + 'T_Superhero_Male_Ligh.png'), tl.loadAsync(P + 'T_Superhero_Female_Light_BaseColor.png'), ...hairNames.map(h => loader.loadAsync(P + h + '.gltf')),
   ]);
   bodies.m = m.scene; bodies.f = f.scene;
   for (const t of [ml, fl]) { t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; }
   lightSkin.m = ml; lightSkin.f = fl;
   hairNames.forEach((h, i) => { hairs[h] = hs[i].scene; });
-  for (const c of anims.animations) {
-    // The clips were made on a mannequin. Keep its rotations, but only move the hips, so each body keeps its own proportions.
-    c.tracks = c.tracks.filter(t => t.name.endsWith('.quaternion') || /^(root|pelvis)\.position$/.test(t.name));
-    clips[c.name] = c;
-  }
+  for (const c of anims.animations) clips[c.name] = c;
 }
 
 // Paints the clothes onto the body by where each point sits in the rest pose (arms out, standing straight).

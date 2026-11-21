@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agent Office</title>
 <link rel="stylesheet" href="/style.css">
+<link rel="preload" href="/assets/people/office-animations.glb" as="fetch" crossorigin>
 <script type="importmap">{"imports":{"three":"/vendor/three/build/three.module.js","three/addons/":"/vendor/three/examples/jsm/"}}</script>
 </head>
 <body>
@@ -28,7 +29,7 @@
       <header><b>Activity</b><span id="logTabs"><button data-f="all" class="on">All</button><button data-f="work">Work</button><button data-f="life">Office life</button></span><button id="logClose" title="Close">×</button></header>
       <ol id="logList"></ol>
     </div>
-    <div id="loading">Opening the office…</div>
+    <div id="loading" role="status">Opening the office…</div>
   </div>
   <aside id="side">
     <section id="chatBox">
@@ -40,8 +41,8 @@
     </section>
     <form id="composer">
       <div id="target"><span id="targetName"></span><button type="button" id="targetClear" hidden>×</button></div>
-      <textarea id="input" rows="2" placeholder="Ask the Mayor…"></textarea>
-      <button id="send" type="submit">Send</button>
+      <textarea id="input" rows="2" placeholder="Ask the Mayor…" disabled></textarea>
+      <button id="send" type="submit" disabled>Send</button>
     </form>
   </aside>
 </div>

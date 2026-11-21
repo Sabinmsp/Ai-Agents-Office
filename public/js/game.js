@@ -2,12 +2,12 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { MAX_LEVEL, BUILD_COST, EFFORT_BY_LEVEL, SKILLS } from './config.js';
+import { ANIM, MAX_LEVEL, BUILD_COST, EFFORT_BY_LEVEL, SKILLS } from './config.js';
 import { BOSS, AGENTS } from './team.js';
 import { renderMarkdown } from './markdown.js';
 import { W, D, ROOMS, SPOTS, DESKS, LIGHTS, FX, POINTS, BRAIN, CATEGORY_COLORS, buildOffice, setDeskLevel, setDeskBusy, setDeskText, setDeskAlert, setWhiteboard, setWallStats, setBrainStats, brainAddMemory, brainRemoveMemory, brainSetMemories, brainFlash, brainPulse, brainCorePos, updateBrain, findPath, SPORTS } from './office.js';
 import { createBus, MockSource, ServerSource, WebSocketSource } from './agentEvents.js';
-import { ANIM, clip, loadPeople, makePerson } from './people.js';
+import { clip, loadPeople, makePerson } from './people.js';
 
 const $ = id => document.getElementById(id);
 const stage = $('stage'), canvas = $('view'), labels = $('labels');
@@ -125,6 +125,7 @@ function updateCamera(dt) {
 // A portrait of each person for the cards and the team chart, rendered once from the 3D model.
 const portraits = {};
 function makePortraits() {
+  if (portraits[BOSS.id]) return;
   const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); r.setSize(128, 128);
   const s = new THREE.Scene(); s.add(new THREE.HemisphereLight('#ffffff', '#b0a090', 2.4)); const d = new THREE.DirectionalLight('#fff', 1.8); d.position.set(2, 3, 4); s.add(d);
   const cam = new THREE.PerspectiveCamera(26, 1, 0.1, 100); cam.position.set(0.3, 2.3, 1.75); cam.lookAt(0, 2.22, 0);
@@ -430,7 +431,7 @@ function updateLabels(now) {
 let state = { live: false, city: { coins: 0, lots: {}, skills: {}, hired: {}, stats: { missions: 0 } } };
 let target = null;   // null = talk to the manager, otherwise a team member's id
 const api = async (url, body) => { const r = await fetch(url, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : undefined); const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Request failed'); return j; };
-const avatar = who => `<img class="avatar" src="${portraits[who.id] || ''}" alt="">`;
+const avatar = who => { makePortraits(); return `<img class="avatar" src="${portraits[who.id]}" alt="">`; };
 const dayOf = id => state.city.hired?.[id] ? Math.floor((Date.now() - Date.parse(state.city.hired[id])) / 864e5) + 1 : 0;
 const knows = (id, skill) => (state.city.skills?.[id] || []).includes(skill);
 
@@ -863,11 +864,10 @@ $('input').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftK
 // ---------------------------------------------------------------- start
 async function start() {
   resize();
-  state = await api('/api/state');
-  await Promise.all([buildOffice(scene), loadPeople()]);
+  const [initialState, , loadScenery] = await Promise.all([api('/api/state'), loadPeople(), buildOffice(scene)]);
+  state = initialState;
   for (const L of LIGHTS.filter(l => l.power >= 0.7)) { const p = new THREE.PointLight('#ffd3a0', 15 * L.power, 26, 1.5); p.position.set(L.x, L.y, L.z); p.userData.base = 15 * L.power; scene.add(p); lamps.push(p); }
   refreshTime(); setInterval(refreshTime, 30000);
-  makePortraits();
   for (const d of Object.values(DESKS)) {
     setDeskLevel(d, state.city.lots[d.id] ?? 0);
     if (d.level) spawn(d.who, d.seat);
@@ -878,7 +878,8 @@ async function start() {
   setInterval(async () => { try { const was = state.live; applyState(await api('/api/state')); if (!was && state.live) note(`Connected: ${state.models.length} models available. Pick one per person on their card.`); } catch {} }, 15000);
   setTarget(null); pickSource(); refreshStats(); loadBrain(); refreshTokens(); setInterval(refreshTokens, 20000);
   $('loading').hidden = true;
-  let last = performance.now(), clock = 0, nextShadow = 0;
+  $('input').disabled = $('send').disabled = false;
+  let last = performance.now(), clock = 0, nextShadow = 0, firstFrame = true;
   renderer.setAnimationLoop(() => {
     const now = performance.now(), dt = Math.min((now - last) / 1000, 0.1); last = now; clock += dt;
     updateCamera(dt); controls.update();
@@ -887,6 +888,10 @@ async function start() {
     if (now >= nextShadow) { renderer.shadowMap.needsUpdate = true; nextShadow = now + 65; }
     renderer.render(scene, camera);
     updateLabels(now);
+    if (firstFrame) {
+      firstFrame = false;
+      setTimeout(loadScenery, 0);
+    }
   });
   window.__office = { SPORTS, play: id => joinSport(walkers[id]), celebrate: id => celebrate(walkers[id]), coach: () => { walkers.hq.idle = -1; }, spawn: id => spawn(DESKS[id].who, DESKS[id].seat), DESKS, walkers, camera, controls, bus, BRAIN, brainStat, openBrain, mock, tasks, approvals, hire, openOrg, openBrain, showCard, focus, submit: (t, a) => source.submit(t, a), decide: (id, ok) => source.decide(id, ok) };
 }
