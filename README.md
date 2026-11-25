@@ -14,6 +14,8 @@ Then open http://localhost:5173
 
 The Vercel build serves the public demo with simulated agents. Office progress is temporary and can be shared between visitors served by the same instance. Run the local server to use live providers, save reports, and edit the Brain.
 
+The Vercel build (`npm run build:vercel`) bundles and minifies the page's JavaScript with three.js into one cached file and serves the team list as a static file. If you add new images or models, run `python3 tools/optimize-assets.py` (needs Pillow) to shrink them before committing.
+
 ### Connecting the AI (OmniRoute, free providers)
 
 The team thinks through [OmniRoute](https://github.com/cheaper-inference/OmniRoute), a local gateway to many AI providers, several with free tiers.

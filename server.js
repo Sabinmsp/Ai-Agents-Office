@@ -4,11 +4,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
-import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import YAML from 'yaml';
 import { createBrain, CATEGORIES, SENSITIVE } from './brain.js';
+import { loadTeam } from './team-config.js';
 import { MAX_LEVEL, BUILD_COST, REWARD, EFFORT_BY_LEVEL, START, SKILLS } from './public/js/config.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -19,19 +18,7 @@ const HOSTED_DEMO = process.env.VERCEL === '1';
 
 // ---------- the team: config/agents.yaml ----------
 const TEAM_FILE = path.join(ROOT, 'config', 'agents.yaml');
-function loadTeam() {
-  const raw = YAML.parse(fs.readFileSync(TEAM_FILE, 'utf8'));
-  const person = (p, i) => {
-    for (const k of ['id', 'name', 'title']) if (!p?.[k]) throw new Error(`config/agents.yaml: person ${i + 1} is missing "${k}".`);
-    return { model: 'auto', tools: [], prompt: '', skill: '', dept: 'Team', color: '#9aa3d0', ...p, look: { body: 'm', skin: 'light', cut: 'parted', hair: '#3b2a20', shirt: '#555', pants: '#222', sleeve: 'long', ...(p.look || {}) } };
-  };
-  const manager = person({ dept: 'Head', ...raw.manager, id: 'hq' }, 0), team = (raw.team || []).map(person);
-  if (team.length > 12) throw new Error('config/agents.yaml: the office has 12 desks; list at most 12 team members.');
-  const ids = new Set(); for (const p of team) { if (ids.has(p.id) || p.id === 'hq') throw new Error(`config/agents.yaml: the id "${p.id}" is used twice.`); ids.add(p.id); }
-  for (const p of [manager, ...team]) p.building = p.desk || `${p.name}'s desk`;
-  return { manager, team, trusted: (raw.trusted_models || []).map(String) };
-}
-const TEAM = loadTeam(), BOSS = TEAM.manager, AGENTS = TEAM.team, TRUSTED = new Set(TEAM.trusted);
+const TEAM = loadTeam(YAML.parse(fs.readFileSync(TEAM_FILE, 'utf8'))), BOSS = TEAM.manager, AGENTS = TEAM.team, TRUSTED = new Set(TEAM.trusted);
 // Where the thinking happens: OmniRoute (a local gateway to many providers, OpenAI-style API) or the Anthropic API.
 const BACKEND = HOSTED_DEMO ? 'demo' : process.env.AI_BACKEND || (process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN ? 'anthropic' : 'omniroute');
 const OMNI_URL = (process.env.OMNIROUTE_URL || 'http://localhost:20128/v1').replace(/\/$/, '');
@@ -40,7 +27,10 @@ const omniKey = () => { try { return (fs.readFileSync(path.join(ROOT, '.env'), '
 const omniAuth = () => { const k = omniKey(); return k ? { Authorization: `Bearer ${k}` } : {}; };
 const DEFAULT_MODEL = process.env.CITY_MODEL || (BACKEND === 'anthropic' ? 'claude-haiku-5-5' : 'auto');
 const CLAUDE_MODELS = ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5'];
-const client = BACKEND === 'anthropic' ? new Anthropic() : null;
+// The Anthropic SDK is only loaded when it is used, so the hosted demo's API starts faster.
+const Anthropic = BACKEND === 'anthropic' ? (await import('@anthropic-ai/sdk')).default : null;
+const { zodOutputFormat } = BACKEND === 'anthropic' ? await import('@anthropic-ai/sdk/helpers/zod') : {};
+const client = Anthropic ? new Anthropic() : null;
 const FALLBACK = { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' };
 
 // ---------- city save file ----------
@@ -294,10 +284,10 @@ async function ask({ system, user, effort, maxTokens = 16000, onText, onTool, fo
 }
 
 function explain(err) {
-  if (err instanceof Anthropic.AuthenticationError) return 'The API key was rejected. Check ANTHROPIC_API_KEY in .env.';
-  if (err instanceof Anthropic.RateLimitError) return 'Rate limited by the API. Wait a moment and try again.';
-  if (err instanceof Anthropic.APIConnectionError) return 'Could not reach the Claude API. Check your internet connection.';
-  if (err instanceof Anthropic.APIError) return `Claude API error ${err.status ?? ''}: ${err.message}`;
+  if (Anthropic && err instanceof Anthropic.AuthenticationError) return 'The API key was rejected. Check ANTHROPIC_API_KEY in .env.';
+  if (Anthropic && err instanceof Anthropic.RateLimitError) return 'Rate limited by the API. Wait a moment and try again.';
+  if (Anthropic && err instanceof Anthropic.APIConnectionError) return 'Could not reach the Claude API. Check your internet connection.';
+  if (Anthropic && err instanceof Anthropic.APIError) return `Claude API error ${err.status ?? ''}: ${err.message}`;
   if (/fetch failed|ECONNREFUSED/.test(err?.message || '') || err?.cause?.code === 'ECONNREFUSED') return `Could not reach OmniRoute at ${OMNI_URL}. Start it with: omniroute`;
   return err?.message || String(err);
 }

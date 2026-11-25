@@ -7,6 +7,9 @@
     "api/office.js": { "includeFiles": "config/agents.yaml" }
   },
   "routes": [
+    { "src": "/js/.+-[A-Z0-9]{8}\\.js(\\.map)?", "headers": { "Cache-Control": "public, max-age=31536000, immutable" }, "continue": true },
+    { "src": "/assets/.*", "headers": { "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800" }, "continue": true },
+    { "src": "/api/team", "dest": "/api-static/team.json", "headers": { "Cache-Control": "public, max-age=0, must-revalidate" } },
     { "src": "/api/(.*)", "dest": "/api/office?endpoint=$1" },
     { "handle": "filesystem" }
   ]

@@ -12,5 +12,8 @@
     "three": "latest",
     "yaml": "^2.9.1",
     "zod": "latest"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.12"
   }
 }

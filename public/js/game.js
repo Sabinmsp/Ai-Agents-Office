@@ -1,5 +1,6 @@
 // Agent Office client: an isometric office where each desk belongs to an AI team member who works for you.
 import * as THREE from 'three';
+import './cache.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { ANIM, MAX_LEVEL, BUILD_COST, EFFORT_BY_LEVEL, SKILLS } from './config.js';
@@ -893,6 +894,6 @@ async function start() {
       setTimeout(loadScenery, 0);
     }
   });
-  window.__office = { SPORTS, play: id => joinSport(walkers[id]), celebrate: id => celebrate(walkers[id]), coach: () => { walkers.hq.idle = -1; }, spawn: id => spawn(DESKS[id].who, DESKS[id].seat), DESKS, walkers, camera, controls, bus, BRAIN, brainStat, openBrain, mock, tasks, approvals, hire, openOrg, openBrain, showCard, focus, submit: (t, a) => source.submit(t, a), decide: (id, ok) => source.decide(id, ok) };
+  window.__office = { SPORTS, play: id => joinSport(walkers[id]), celebrate: id => celebrate(walkers[id]), coach: () => { walkers.hq.idle = -1; }, spawn: id => spawn(DESKS[id].who, DESKS[id].seat), DESKS, walkers, camera, controls, bus, BRAIN, brainStat, openBrain, mock, tasks, approvals, hire, openOrg, showCard, focus, submit: (t, a) => source.submit(t, a), decide: (id, ok) => source.decide(id, ok) };
 }
 start().catch(e => { console.error(e); $('loading').textContent = 'Could not open the office: ' + e.message; });

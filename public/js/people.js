@@ -11,7 +11,7 @@ export async function loadPeople() {
   const hairNames = ['Hair_SimpleParted', 'Hair_Buzzed', 'Hair_Long', 'Hair_Beard'];
   const [anims, m, f, ml, fl, ...hs] = await Promise.all([
     loader.loadAsync(P + 'office-animations.glb'), loader.loadAsync(P + 'Superhero_Male_FullBody.gltf'), loader.loadAsync(P + 'Superhero_Female_FullBody.gltf'),
-    tl.loadAsync(P + 'T_Superhero_Male_Ligh.png'), tl.loadAsync(P + 'T_Superhero_Female_Light_BaseColor.png'), ...hairNames.map(h => loader.loadAsync(P + h + '.gltf')),
+    tl.loadAsync(P + 'T_Superhero_Male_Ligh.jpg'), tl.loadAsync(P + 'T_Superhero_Female_Light_BaseColor.jpg'), ...hairNames.map(h => loader.loadAsync(P + h + '.gltf')),
   ]);
   bodies.m = m.scene; bodies.f = f.scene;
   for (const t of [ml, fl]) { t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; }
