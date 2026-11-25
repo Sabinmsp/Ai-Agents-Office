@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#070a17">
 <title>Agent Office</title>
 <link rel="stylesheet" href="/style.css">
 <link rel="preload" href="/assets/people/office-animations.glb" as="fetch" crossorigin>
@@ -29,9 +30,10 @@
       <header><b>Activity</b><span id="logTabs"><button data-f="all" class="on">All</button><button data-f="work">Work</button><button data-f="life">Office life</button></span><button id="logClose" title="Close">×</button></header>
       <ol id="logList"></ol>
     </div>
-    <div id="loading" role="status">Opening the office…</div>
+    <div id="loading" role="status"><span class="orb"></span><span class="txt">Opening the office…</span></div>
   </div>
   <aside id="side">
+    <button id="sheetHandle" type="button" aria-expanded="false" aria-label="Show chat and jobs"><i class="grip"></i><span id="sheetPeek">Chat with the team</span><span id="sheetJobs" hidden></span></button>
     <section id="chatBox">
       <div id="banner" hidden></div>
       <div id="chat"></div>

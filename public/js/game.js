@@ -1,6 +1,7 @@
 // Agent Office client: an isometric office where each desk belongs to an AI team member who works for you.
 import * as THREE from 'three';
 import './cache.js';
+import { PHONE } from './mobile.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { ANIM, MAX_LEVEL, BUILD_COST, EFFORT_BY_LEVEL, SKILLS } from './config.js';
@@ -47,7 +48,7 @@ controls.addEventListener('change', () => { controls.target.x = THREE.MathUtils.
 const hemi = new THREE.HemisphereLight('#ffe9cf', '#2a2630', 0.5); scene.add(hemi);
 const sun = new THREE.DirectionalLight('#ffe2bd', 1.9);        // the sun by day, the moon by night; the roof is open, so it lights the rooms
 sun.target.position.set(W / 2, 0, D / 2); scene.add(sun.target);
-sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.radius = 2;
+sun.castShadow = true; sun.shadow.mapSize.setScalar(PHONE ? 1024 : 2048); sun.shadow.radius = 2;   // phones: a lighter shadow map keeps the frame rate up
 Object.assign(sun.shadow.camera, { left: -52, right: 52, top: 52, bottom: -52, near: 5, far: 220 });
 sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.06;
 scene.add(sun);
@@ -886,7 +887,7 @@ async function start() {
     updateCamera(dt); controls.update();
     for (const w of Object.values(walkers)) { brain(w, dt, now); w.update(dt, clock); }
     updateFlying(dt); updateIcons(dt); pulseApprovals(clock); updateBeams(dt); updateBrain(dt, clock); updateSports(dt, clock);
-    if (now >= nextShadow) { renderer.shadowMap.needsUpdate = true; nextShadow = now + 65; }
+    if (now >= nextShadow) { renderer.shadowMap.needsUpdate = true; nextShadow = now + (PHONE ? 160 : 65); }
     renderer.render(scene, camera);
     updateLabels(now);
     if (firstFrame) {
