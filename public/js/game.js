@@ -433,7 +433,9 @@ function updateLabels(now) {
 let state = { live: false, city: { coins: 0, lots: {}, skills: {}, hired: {}, stats: { missions: 0 } } };
 let target = null;   // null = talk to the manager, otherwise a team member's id
 const api = async (url, body) => { const r = await fetch(url, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : undefined); const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Request failed'); return j; };
-const avatar = who => { makePortraits(); return `<img class="avatar" src="${portraits[who.id]}" alt="">`; };
+// Profile pictures: drawings in assets/avatars (made by tools/make-avatars.js). Anyone without one gets a portrait rendered from their 3D model.
+window.__portrait = img => { img.onerror = null; makePortraits(); img.src = portraits[img.dataset.id]; };
+const avatar = who => `<span class="avatar" style="--c:${who.color}">${who.kit?.number != null ? `<em>${who.kit.number}</em>` : ''}<img src="/assets/avatars/${encodeURIComponent(who.id)}.svg" data-id="${escapeHtml(who.id)}" alt="" onerror="__portrait(this)"></span>`;
 const dayOf = id => state.city.hired?.[id] ? Math.floor((Date.now() - Date.parse(state.city.hired[id])) / 864e5) + 1 : 0;
 const knows = (id, skill) => (state.city.skills?.[id] || []).includes(skill);
 

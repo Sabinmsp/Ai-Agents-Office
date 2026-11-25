@@ -16,6 +16,8 @@ The Vercel build serves the public demo with simulated agents. Office progress i
 
 The Vercel build (`npm run build:vercel`) bundles and minifies the page's JavaScript with three.js into one cached file and serves the team list as a static file. If you add new images or models, run `python3 tools/optimize-assets.py` (needs Pillow) to shrink them before committing.
 
+Profile pictures are drawn from Open Peeps by Pablo Stanley (CC0: no copyright, free for any use) and coloured to match each person's look. After changing the team in `config/agents.yaml`, run `node tools/make-avatars.js` to redraw them; anyone without a picture gets a portrait rendered from their 3D model.
+
 ### Connecting the AI (OmniRoute, free providers)
 
 The team thinks through [OmniRoute](https://github.com/cheaper-inference/OmniRoute), a local gateway to many AI providers, several with free tiers.

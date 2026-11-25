@@ -42,7 +42,7 @@ fs.mkdirSync(path.dirname(SAVE), { recursive: true });
 fs.mkdirSync(REPORTS, { recursive: true });
 let city;
 try { city = JSON.parse(fs.readFileSync(SAVE, 'utf8')); }
-catch { city = { coins: START.coins, lots: { ...START.lots }, skills: structuredClone(START.skills), hired: {}, stats: { missions: 0, jobs: 0 } }; }
+catch { city = { coins: START.coins, lots: { ...START.lots, ...(START.hireEveryone ? Object.fromEntries(AGENTS.map(a => [a.id, 1])) : {}) }, skills: structuredClone(START.skills), hired: {}, stats: { missions: 0, jobs: 0 } }; }
 // Saves from before config/agents.yaml used desk names as ids; carry those people over.
 const OLD_IDS = { library: 'iris', lab: 'kai', news: 'nova', studio: 'leo' };
 for (const part of ['lots', 'skills', 'hired', 'models']) for (const [from, to] of Object.entries(OLD_IDS)) if (city[part]?.[from] !== undefined) { city[part][to] ??= city[part][from]; delete city[part][from]; }

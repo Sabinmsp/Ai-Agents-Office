@@ -3,7 +3,8 @@ export const MAX_LEVEL = 3;
 export const BUILD_COST = [100, 250, 500];         // cost to go from level 0->1, 1->2, 2->3
 export const REWARD = { job: 40, mission: 60 };
 export const EFFORT_BY_LEVEL = { 1: 'medium', 2: 'high', 3: 'xhigh' };  // upgrades make an agent think harder
-export const START = { coins: 300, lots: { hq: 1, iris: 1, kai: 1 }, skills: { iris: ['search'] } };
+// A new game starts with the coach and the whole starting eleven hired (everyone in config/agents.yaml).
+export const START = { coins: 300, lots: { hq: 1 }, hireEveryone: true, skills: { iris: ['search'] } };
 
 // Skills are real abilities a resident uses while working, not badges. Teach them with coins.
 export const SKILLS = [
